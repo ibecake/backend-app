@@ -6,8 +6,8 @@ if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable in .env.local');
 }
 
-// Global cache to prevent reinitializing connections during hot reloads in development
-let cached = global.mongoose;
+// Extend globalThis to include mongoose caching
+let cached = global.mongoose as { conn: mongoose.Connection | null; promise: Promise<mongoose.Connection> | null };
 
 if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
@@ -19,7 +19,7 @@ async function connectToDatabase() {
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => mongoose);
+    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => mongoose.connection);
   }
 
   cached.conn = await cached.promise;

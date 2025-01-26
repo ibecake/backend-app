@@ -1,4 +1,4 @@
-import connectToDatabase from '@/lib/mongoose';
+import connectToDatabase from '../../lib/mongoose';
 import Podcast from '@/models/Podcast';
 import { NextResponse } from 'next/server';
 
