@@ -1,19 +1,24 @@
 import mongoose, { Schema, Document, model } from 'mongoose';
 
-interface IPodcast extends Document {
+interface IEpisode extends Document {
+  podcastId: string;
   title: string;
   description: string;
-  rssLink: string;
+  releaseDate: string;
+  audioUrl?: string;
   createdAt: Date;
 }
 
-const PodcastSchema = new Schema({
+const EpisodeSchema = new Schema({
+  podcastId: String,
   title: String,
   description: String,
-  rssLink: String,
+  releaseDate: String,
+  audioUrl: String,
   likes: { type: [String], default: [] },
   favorites: { type: [String], default: [] }, // User IDs who favorited this
   createdAt: { type: Date, default: Date.now }
 });
 
-export default mongoose.models.Podcast || model<IPodcast>('Podcast', PodcastSchema);
+
+export default mongoose.models.Episode || model<IEpisode>('Episode', EpisodeSchema);

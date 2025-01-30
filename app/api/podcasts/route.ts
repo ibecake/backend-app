@@ -1,29 +1,43 @@
+import { NextResponse } from 'next/server';
 import connectToDatabase from '../../lib/mongoose';
 import Podcast from '@/models/Podcast';
-import { NextResponse } from 'next/server';
+import { authorizeAdmin } from '../../lib/authorization';
 
-export async function GET() {
+// **PUT**: Update a podcast (Admins Only)
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
-    await connectToDatabase(); // Connect to MongoDB
-    const podcasts = await Podcast.find({}); // Fetch podcasts
-    return NextResponse.json(podcasts);
+    const admin = authorizeAdmin(req);
+    if (admin instanceof NextResponse) return admin; // Unauthorized response
+
+    const body = await req.json();
+    await connectToDatabase();
+    const updatedPodcast = await Podcast.findByIdAndUpdate(params.id, body, { new: true });
+
+    if (!updatedPodcast) {
+      return NextResponse.json({ error: 'Podcast not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(updatedPodcast);
   } catch (error) {
-    console.error('Error fetching podcasts:', error);
-    return NextResponse.json({ error: 'Failed to fetch podcasts' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update podcast' }, { status: 500 });
   }
 }
 
-export async function POST(req: Request) {
+// **DELETE**: Remove a podcast (Admins Only)
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
-    await connectToDatabase(); // Connect to MongoDB
-    const body = await req.json();
+    const admin = authorizeAdmin(req);
+    if (admin instanceof NextResponse) return admin; // Unauthorized response
 
-    const podcast = new Podcast(body);
-    await podcast.save();
+    await connectToDatabase();
+    const deletedPodcast = await Podcast.findByIdAndDelete(params.id);
 
-    return NextResponse.json({ message: 'Podcast added successfully', podcast });
+    if (!deletedPodcast) {
+      return NextResponse.json({ error: 'Podcast not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Podcast deleted successfully' });
   } catch (error) {
-    console.error('Error adding podcast:', error);
-    return NextResponse.json({ error: 'Failed to add podcast' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete podcast' }, { status: 500 });
   }
 }
