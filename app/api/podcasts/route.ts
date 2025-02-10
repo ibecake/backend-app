@@ -3,14 +3,27 @@ import connectToDatabase from "../../lib/mongoose";
 import Podcast from "@/models/Podcast";
 import { authorizeAdmin } from "../../lib/authorization";
 
+// ✅ Utility function to set CORS headers
+function setCorsHeaders(response: NextResponse) {
+  response.headers.set("Access-Control-Allow-Origin", "*"); // Allow all origins (Change in production)
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  return response;
+}
+
+// ✅ Handle OPTIONS requests (Preflight)
+export async function OPTIONS() {
+  return setCorsHeaders(NextResponse.json({ message: "CORS Preflight OK" }));
+}
+
 // **GET**: Fetch all podcasts (Public)
 export async function GET() {
   try {
     await connectToDatabase();
     const podcasts = await Podcast.find({});
-    return NextResponse.json(podcasts);
+    return setCorsHeaders(NextResponse.json(podcasts));
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch podcasts" }, { status: 500 });
+    return setCorsHeaders(NextResponse.json({ error: "Failed to fetch podcasts" }, { status: 500 }));
   }
 }
 
@@ -25,9 +38,9 @@ export async function POST(req: Request) {
     const podcast = new Podcast(body);
     await podcast.save();
 
-    return NextResponse.json({ message: "Podcast added successfully", podcast });
+    return setCorsHeaders(NextResponse.json({ message: "Podcast added successfully", podcast }));
   } catch (error) {
-    return NextResponse.json({ error: "Failed to add podcast" }, { status: 500 });
+    return setCorsHeaders(NextResponse.json({ error: "Failed to add podcast" }, { status: 500 }));
   }
 }
 
@@ -42,12 +55,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const updatedPodcast = await Podcast.findByIdAndUpdate(params.id, body, { new: true });
 
     if (!updatedPodcast) {
-      return NextResponse.json({ error: "Podcast not found" }, { status: 404 });
+      return setCorsHeaders(NextResponse.json({ error: "Podcast not found" }, { status: 404 }));
     }
 
-    return NextResponse.json(updatedPodcast);
+    return setCorsHeaders(NextResponse.json(updatedPodcast));
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update podcast" }, { status: 500 });
+    return setCorsHeaders(NextResponse.json({ error: "Failed to update podcast" }, { status: 500 }));
   }
 }
 
@@ -61,11 +74,11 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const deletedPodcast = await Podcast.findByIdAndDelete(params.id);
 
     if (!deletedPodcast) {
-      return NextResponse.json({ error: "Podcast not found" }, { status: 404 });
+      return setCorsHeaders(NextResponse.json({ error: "Podcast not found" }, { status: 404 }));
     }
 
-    return NextResponse.json({ message: "Podcast deleted successfully" });
+    return setCorsHeaders(NextResponse.json({ message: "Podcast deleted successfully" }));
   } catch (error) {
-    return NextResponse.json({ error: "Failed to delete podcast" }, { status: 500 });
+    return setCorsHeaders(NextResponse.json({ error: "Failed to delete podcast" }, { status: 500 }));
   }
 }
