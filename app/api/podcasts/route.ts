@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "../../lib/mongoose";
 import Podcast from "@/models/Podcast";
 import { authorizeAdmin } from "../../lib/authorization";
+import { verifyToken } from "../../lib/auth";
 
 // ✅ Utility function to set CORS headers
 function setCorsHeaders(response: NextResponse) {
@@ -9,6 +10,14 @@ function setCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   return response;
+}
+
+// ✅ Middleware to check authentication
+function requireAuth(req: Request) {
+  const token = req.headers.get("Authorization")?.split(" ")[1];
+  const user = token ? verifyToken(token) : null;
+
+  return user || NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
 // ✅ Handle OPTIONS requests (Preflight)
@@ -27,12 +36,12 @@ export async function GET() {
   }
 }
 
-// **POST**: Add a new podcast (Admins Only)
+// **POST**: Add a new podcast (Authenticated users only)
 export async function POST(req: Request) {
-  try {
-    const admin = authorizeAdmin(req);
-    if (admin instanceof NextResponse) return admin; // Unauthorized response
+  const user = requireAuth(req);
+  if (user instanceof NextResponse) return user; // Unauthorized response
 
+  try {
     const body = await req.json();
     await connectToDatabase();
     const podcast = new Podcast(body);
@@ -46,10 +55,14 @@ export async function POST(req: Request) {
 
 // **PUT**: Update a podcast (Admins Only)
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  try {
-    const admin = authorizeAdmin(req);
-    if (admin instanceof NextResponse) return admin; // Unauthorized response
+  const user = requireAuth(req);
+  if (user instanceof NextResponse) return user; // Unauthorized response
 
+  if (user.role !== "admin") {
+    return setCorsHeaders(NextResponse.json({ error: "Admin access required" }, { status: 403 }));
+  }
+
+  try {
     const body = await req.json();
     await connectToDatabase();
     const updatedPodcast = await Podcast.findByIdAndUpdate(params.id, body, { new: true });
@@ -66,10 +79,14 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
 // **DELETE**: Remove a podcast (Admins Only)
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-  try {
-    const admin = authorizeAdmin(req);
-    if (admin instanceof NextResponse) return admin; // Unauthorized response
+  const user = requireAuth(req);
+  if (user instanceof NextResponse) return user; // Unauthorized response
 
+  if (user.role !== "admin") {
+    return setCorsHeaders(NextResponse.json({ error: "Admin access required" }, { status: 403 }));
+  }
+
+  try {
     await connectToDatabase();
     const deletedPodcast = await Podcast.findByIdAndDelete(params.id);
 
